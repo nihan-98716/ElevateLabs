@@ -6,8 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.cluster import KMeans
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import silhouette_score
 from sklearn.decomposition import PCA
@@ -50,22 +49,19 @@ def find_optimal_k(scaled_data, k_range):
     print(f"Based on Silhouette Score analysis, the optimal number of clusters is K = {optimal_k}.")
     return optimal_k
 
-def interpret_clusters(df_with_clusters, scaler, optimal_k):
+def interpret_clusters(df_with_clusters, scaler, numerical_features):
     """
     Provides a summary of each cluster's characteristics.
     """
-    print("\n--- Customer Segment Interpretation ---")
-    # Invert scaling for original feature values and group by cluster
-    original_features = scaler.named_transformers_['num'].inverse_transform(df_with_clusters[['Age', 'Annual Income (k$)', 'Spending Score (1-100)']])
-    df_original_features = pd.DataFrame(original_features, columns=['Age', 'Annual Income (k$)', 'Spending Score (1-100)'], index=df_with_clusters.index)
-    df_with_clusters[['Age', 'Annual Income (k$)', 'Spending Score (1-100)']] = df_original_features
+    print("\n--- Wholesale Customer Segment Interpretation ---")
+    # Invert scaling to get original feature values back for interpretation
+    original_features = scaler.inverse_transform(df_with_clusters[numerical_features])
+    df_original_features = pd.DataFrame(original_features, columns=numerical_features, index=df_with_clusters.index)
+    df_with_clusters[numerical_features] = df_original_features
     
-    cluster_summary = df_with_clusters.groupby('Cluster').agg({
-        'Age': ['mean', 'std'],
-        'Annual Income (k$)': ['mean', 'std'],
-        'Spending Score (1-100)': ['mean', 'std'],
-        'Gender_Male': lambda x: f"{(x.mean()*100):.1f}% Male"
-    }).round(2)
+    # Create a summary of each cluster's mean spending
+    agg_dict = {col: ['mean'] for col in numerical_features}
+    cluster_summary = df_with_clusters.groupby('Cluster').agg(agg_dict).round(0)
     
     print(cluster_summary)
 
@@ -76,25 +72,17 @@ def main():
     print("--- Starting Optimized K-Means Clustering Pipeline ---")
 
     # 1. Load and Prepare Data
-    url = 'https://raw.githubusercontent.com/SteffiPeTaffy/machine-learning-jupyter-notebooks/master/clustering/mall_customers.csv'
+    # Using the "Wholesale customers" dataset from the UCI repository
+    url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/00292/Wholesale%20customers%20data.csv'
     df = pd.read_csv(url)
-    df.rename(columns={'Genre': 'Gender'}, inplace=True)
-
-    # Define preprocessing for numerical and categorical features
-    numerical_features = ['Age', 'Annual Income (k$)', 'Spending Score (1-100)']
-    categorical_features = ['Gender']
-
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('num', StandardScaler(), numerical_features),
-            ('cat', OneHotEncoder(), categorical_features)
-        ],
-        remainder='passthrough'
-    )
     
-    # Create the full preprocessing pipeline
-    pipeline = Pipeline(steps=[('preprocessor', preprocessor)])
-    X_processed = pipeline.fit_transform(df)
+    # For this clustering analysis, we focus on the spending features
+    numerical_features = ['Fresh', 'Milk', 'Grocery', 'Frozen', 'Detergents_Paper', 'Delicassen']
+    df_features = df[numerical_features]
+
+    # Preprocessing: All features are numerical, so we only need to scale them
+    scaler = StandardScaler()
+    X_processed = scaler.fit_transform(df_features)
     print("\n[Step 1] Data loaded and features preprocessed successfully.")
 
     # 2. Find Optimal K
@@ -108,9 +96,7 @@ def main():
 
     # 4. Interpret the Clusters
     print("\n[Step 3] Analyzing cluster characteristics...")
-    # Add gender back for interpretation
-    df['Gender_Male'] = df['Gender'].apply(lambda x: 1 if x == 'Male' else 0)
-    interpret_clusters(df.copy(), pipeline.named_steps['preprocessor'], optimal_k)
+    interpret_clusters(df.copy(), scaler, numerical_features)
 
     # 5. Visualize Clusters using PCA
     print("\n[Step 4] Visualizing clusters using PCA for dimensionality reduction...")
@@ -130,7 +116,7 @@ def main():
     plt.scatter(centroids_pca[:, 0], centroids_pca[:, 1], s=300, c='red', 
                 marker='X', label='Centroids', edgecolors='black')
     
-    plt.title('Customer Segments (Visualized with PCA)', fontsize=18)
+    plt.title('Wholesale Customer Segments (Visualized with PCA)', fontsize=18)
     plt.xlabel('Principal Component 1', fontsize=12)
     plt.ylabel('Principal Component 2', fontsize=12)
     plt.legend()
