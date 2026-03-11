@@ -16,7 +16,7 @@ Work through every item below in order. Apply all relevant fixes in a single pas
 
 ### 2. Fix PEP 8 Formatting
 - Normalise indentation to 4 spaces; replace any tabs.
-- Wrap lines longer than 79 characters (72 for docstrings/comments).
+- Wrap code lines at 79 characters and docstring/comment lines at 72 characters.
 - Add exactly **2 blank lines** between top-level definitions and **1 blank line** between class methods.
 - Remove trailing whitespace on every line.
 - Ensure a single newline at the end of the file.
@@ -47,10 +47,10 @@ Work through every item below in order. Apply all relevant fixes in a single pas
 
 ### 5. Add Type Hints
 - Add type annotations to every function signature that is missing them.
-- Use built-in types (`list`, `dict`, `tuple`) for Python 3.9+; use `typing` imports for earlier versions.
+- Use `typing` imports (`List`, `Dict`, `Tuple`, `Optional`) for Python 3.8 compatibility; built-in generics (`list[…]`, `dict[…]`) are only available from Python 3.9+.
 
 ### 6. Simplify Logic
-- Replace chains of `if/elif` that test the same variable with a `match` statement (Python 3.10+) or a dispatch dict where appropriate.
+- Replace chains of `if/elif` that test the same variable with a dispatch dict where appropriate (use `match` statements only if the codebase has explicitly migrated to Python 3.10+).
 - Remove unnecessary `else` after a `return` or `raise`.
 - Replace explicit index loops (`for i in range(len(x))`) with direct iteration where possible.
 - Replace `map`/`filter` with list comprehensions when it improves readability.
